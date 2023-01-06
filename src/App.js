@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
 
-import StepByStep from "./StepByStep/StepByStep";
+// import StepByStep from "./StepByStep/StepByStep";
 import "./styles.css";
 
 function App() {
   const [imageUrl, setImageUrl] = useState("");
   const [postCaption, setPostCaption] = useState("");
   const [isSharingPost, setIsSharingPost] = useState(false);
+  const [isSharingPostFacebook, setIsSharingPostFacebook] = useState(false);
   const [facebookUserAccessToken, setFacebookUserAccessToken] = useState("");
 
   /* --------------------------------------------------------
@@ -27,8 +28,8 @@ function App() {
         setFacebookUserAccessToken(response.authResponse?.accessToken);
       },
       {
-        // Scopes that allow us to publish content to Instagram
-        scope: "instagram_basic,pages_show_list",
+        // Scopes that allow us to publish content to Instagram and Facebook
+        scope: "pages_manage_metadata,instagram_basic,pages_show_list,pages_manage_posts,pages_read_engagement,user_photos,user_posts,publish_video,business_management",
       }
     );
   };
@@ -127,6 +128,60 @@ function App() {
     setPostCaption("");
   };
 
+  // Facebook 
+  const shareFacebookPost = async () => {
+    setIsSharingPostFacebook(true);
+    const facebookPages = await getFacebookPages();
+    const facebookPageToPublish = facebookPages[0].id;
+    const facebookPageToken = await getFacebookPageToken(facebookPageToPublish);
+
+    await postToFacebook(
+      facebookPageToPublish,
+      facebookPageToken
+    );
+    setIsSharingPostFacebook(false);
+
+    // Reset the form state
+    setImageUrl("");
+    setPostCaption("");
+  };
+
+  const getFacebookPageToken = (facebokPageId) =>{
+    return new Promise((resolve) => {
+      window.FB.api(
+        facebokPageId,
+        "GET",
+        {
+          fields: 'access_token',
+          access_token: facebookUserAccessToken
+        },
+        (response) => {
+          resolve(response.access_token);
+        }
+      );      
+    });
+  }
+
+  const postToFacebook = (facebookPageId, facebookPageToken) => {
+
+    return new Promise((resolve) => {
+      window.FB.api(
+        `${facebookPageId}/photos`,
+        "POST",
+        {
+          access_token: facebookPageToken,
+          url: imageUrl,
+          message: postCaption,
+        },
+        (response) => {
+          resolve(response.id);
+        }
+      );      
+    });
+  };
+
+
+
   return (
     <>
       <main id="app-main">
@@ -161,12 +216,19 @@ function App() {
               className="btn action-btn"
               disabled={isSharingPost || !imageUrl}
             >
-              {isSharingPost ? "Sharing..." : "Share"}
+              {isSharingPost ? "Sharing to Instagram..." : "Share to Instagram"}
+            </button>
+            <button
+              onClick={shareFacebookPost}
+              className="btn action-btn"
+              disabled={isSharingPostFacebook || !imageUrl}
+            >
+              {isSharingPostFacebook ? "Sharing to Facebook..." : "Share to Facebook"}
             </button>
           </section>
         ) : null}
       </main>
-      <StepByStep facebookUserAccessToken={facebookUserAccessToken} />
+      {/* <StepByStep facebookUserAccessToken={facebookUserAccessToken} /> */}
     </>
   );
 }
