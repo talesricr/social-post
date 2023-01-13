@@ -180,6 +180,20 @@ function App() {
     });
   };
 
+  //Get daily Post Limit
+  const checkPostLimit = async () => {
+    const facebookPages = await getFacebookPages();
+    const instagramAccountId = await getInstagramAccountId(facebookPages[0].id);
+    return new Promise((resolve) => {
+      window.FB.api(
+        `${instagramAccountId}/content_publishing_limit`,
+        "GET",
+        (response) => {
+          resolve(response.quota_usage);
+        }
+      );
+    });
+  };
 
 
   return (
